@@ -6,7 +6,7 @@ import Graph, { AddEdgeOptions, Edge } from "./graph"
  * @typedef {AddEdgeOptions} AddDirectedEdgeOptions
  */
 export type AddDirectedEdgeOptions<S> = AddEdgeOptions<S> & {
-    skipUpdatingCyclicality: boolean
+    skipUpdatingCyclicality?: boolean
 }
 
 /**
