@@ -137,14 +137,40 @@ describe('Graph', () => {
     graph.insert({ a: 4, b: 'b' })
 
     graph.addEdge('1.00', '2.00')
-    expect((graph as any).adjacency[0][1]).toBe(1)
-    expect((graph as any).adjacency[1][0]).toBeFalsy()
-    expect((graph as any).adjacency[1][2]).toBe(0)
+    expect((graph as any).adjacency[0][1]).toEqual({value: 1})
+    expect((graph as any).adjacency[1][0].value).toBeFalsy()
+    expect((graph as any).adjacency[1][2]).toEqual({value: 0})
 
     graph.addEdge('2.00', '1.00')
-    expect((graph as any).adjacency[0][1]).toBe(1)
-    expect((graph as any).adjacency[1][0]).toBe(1)
-    expect((graph as any).adjacency[1][2]).toBeFalsy()
+    expect((graph as any).adjacency[0][1]).toEqual({value: 1})
+    expect((graph as any).adjacency[1][0]).toEqual({value: 1})
+    expect((graph as any).adjacency[1][2].value).toBeFalsy()
+  })
+
+  it('can store data on edges', () => {
+    type NodeType = { name: string }
+    type EdgeData = { weight: number; label: string }
+
+    const graph = new Graph<NodeType, EdgeData>((n: NodeType) => n.name)
+
+    // Insert nodes
+    graph.insert({ name: 'A' })
+    graph.insert({ name: 'B' })
+    graph.insert({ name: 'C' })
+
+    // Add edges with data
+    graph.addEdge('A', 'B', { data: { weight: 5, label: 'connection1' } })
+    graph.addEdge('B', 'C', { data: { weight: 10, label: 'connection2' } })
+    graph.addEdge('A', 'C', { data: { weight: 3, label: 'shortcut' } })
+
+    // Verify edges exist and has the data
+    const edge1 = graph.getEdgeByNodes('A', 'B');
+    const edge2 = graph.getEdgeByNodes('B', 'C');
+    const edge3 = graph.getEdgeByNodes('A', 'C');
+
+    expect(edge1.data?.weight).toBe(5);
+    expect(edge2.data?.weight).toBe(10);
+    expect(edge3.data?.weight).toBe(3);
   })
 
   it('can return the nodes', () => {

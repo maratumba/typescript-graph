@@ -9,8 +9,14 @@ const hash = require('object-hash')
  * @internal
  * This type is simply an indicator of whether an edge exists in the adjacency matrix.
  */
-export type Edge = 1 | 0
+export type Edge<S = void> = {
+  value: 1 | 0
+  data?: S
+}
 
+export type AddEdgeOptions<S = void> = {
+  data?: S
+}
 /**
  * # Graph
  *
@@ -97,9 +103,9 @@ export type Edge = 1 | 0
  *
  * @typeParam T  `T` is the node type of the graph. Nodes can be anything in all the included examples they are simple objects.
  */
-export default class Graph<T> {
+export default class Graph<T, S = void> {
   protected nodes: Map<string, T>
-  protected adjacency: Array<Array<Edge>>
+  protected adjacency: Array<Array<Edge<S>>>
   protected nodeIdentity: (t: T) => string
 
   constructor(nodeIdentity: (node: T) => string = node => hash(node)) {
@@ -126,8 +132,8 @@ export default class Graph<T> {
     }
 
     this.nodes.set(this.nodeIdentity(node), node)
-    this.adjacency.map(adj => adj.push(0))
-    this.adjacency.push(new Array(this.adjacency.length + 1).fill(0))
+    this.adjacency.map(adj => adj.push({ value: 0 }))
+    this.adjacency.push(new Array(this.adjacency.length + 1).fill({ value: 0 }))
 
     return this.nodeIdentity(node)
   }
@@ -163,7 +169,7 @@ export default class Graph<T> {
     this.nodes.set(this.nodeIdentity(node), node)
 
     if (!isOverwrite) {
-      this.adjacency.map(adj => adj.push(0))
+      this.adjacency.map(adj => adj.push({ value: 0 }))
       this.adjacency.push(new Array(this.adjacency.length + 1))
     }
 
@@ -176,8 +182,9 @@ export default class Graph<T> {
    *
    * @param node1Identity The first node to connect (in [[`DirectedGraph`]]s and [[`DirectedAcyclicGraph`]]s this is the `from` node.)
    * @param node2Identity The second node to connect (in [[`DirectedGraph`]]s and [[`DirectedAcyclicGraph`]]s this is the `to` node)
+   * @param options options
    */
-  addEdge(node1Identity: string, node2Identity: string) {
+  addEdge(node1Identity: string, node2Identity: string, options?: AddEdgeOptions<S>) {
     const node1Exists = this.nodes.has(node1Identity)
     const node2Exists = this.nodes.has(node2Identity)
 
@@ -192,7 +199,10 @@ export default class Graph<T> {
     const node1Index = Array.from(this.nodes.keys()).indexOf(node1Identity)
     const node2Index = Array.from(this.nodes.keys()).indexOf(node2Identity)
 
-    this.adjacency[node1Index][node2Index] = 1
+    this.adjacency[node1Index][node2Index] = { value: 1 }
+    if (options?.data) {
+      this.adjacency[node1Index][node2Index].data = options.data
+    }
   }
 
   /**
@@ -210,10 +220,16 @@ export default class Graph<T> {
     return temp
   }
 
+  getEdgeByNodes(node1Identity: string, node2Identity: string): Edge<S> {
+    const node1Index = Array.from(this.nodes.keys()).indexOf(node1Identity)
+    const node2Index = Array.from(this.nodes.keys()).indexOf(node2Identity)
+    return this.adjacency[node1Index][node2Index]
+  }
+
   /**
    * Returns a specific node given the node identity returned from the [[`insert`]] function
    *
-   * @param compareFunc An optional function that indicates the sort order of the returned array
+   * @param nodeIdentity Identifier of the node
    */
   getNode(nodeIdentity: string): T | undefined {
     return this.nodes.get(nodeIdentity)

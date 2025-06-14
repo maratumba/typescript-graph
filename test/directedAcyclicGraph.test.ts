@@ -23,7 +23,7 @@ describe("Directed Acyclic Graph", () => {
     graph.addEdge('A', 'C')
 
     expect(DirectedAcyclicGraph.fromDirectedGraph(graph)).toBeInstanceOf(DirectedAcyclicGraph)
-    
+
     graph.addEdge('C', 'A')
 
     expect(() => DirectedAcyclicGraph.fromDirectedGraph(graph)).toThrow(CycleError)
@@ -67,13 +67,13 @@ describe("Directed Acyclic Graph", () => {
     const topoList2 = graph.topologicallySortedNodes();
 
     expect(topoList2).toEqual([{ name: 'A' }, { name: 'C' }, { name: 'B' }])
-    
+
     graph.insert({ name: 'D' })
     graph.insert({ name: 'E' })
 
     graph.addEdge('A', 'D')
     graph.addEdge('B', 'E')
-    
+
     const topoList3 = graph.topologicallySortedNodes();
 
     expect(topoList3[0]).toEqual({ name: 'A' })

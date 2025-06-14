@@ -1,5 +1,13 @@
-import { NodeDoesntExistError } from "./errors";
-import Graph, { Edge } from "./graph";
+import { NodeDoesntExistError } from "./errors"
+import Graph, { AddEdgeOptions, Edge } from "./graph"
+
+/**
+ * Options for adding an edge
+ * @typedef {AddEdgeOptions} AddDirectedEdgeOptions
+ */
+export type AddDirectedEdgeOptions<S> = AddEdgeOptions<S> & {
+    skipUpdatingCyclicality: boolean
+}
 
 /**
  * # DirectedGraph
@@ -8,7 +16,7 @@ import Graph, { Edge } from "./graph";
  * 
  * @typeParam T `T` is the node type of the graph. Nodes can be anything in all the included examples they are simple objects.
  */
-export default class DirectedGraph<T> extends Graph<T> {
+export default class DirectedGraph<T, S = void> extends Graph<T, S> {
     /** Caches if the graph contains a cycle. If `undefined` then it is unknown. */
     protected hasCycle?: boolean;
 
@@ -37,7 +45,7 @@ export default class DirectedGraph<T> extends Graph<T> {
 
             const nodeIndex = nodeIndices.indexOf(cur[0]);
             this.adjacency[nodeIndex].forEach((hasAdj, index) => {
-                if (hasAdj === 1) {
+                if (hasAdj && hasAdj.value === 1) {
                     const currentInDegree = nodeInDegrees.get(nodeIndices[index]);
                     if (currentInDegree !== undefined) {
                         nodeInDegrees.set(nodeIndices[index], currentInDegree - 1)
@@ -72,7 +80,7 @@ export default class DirectedGraph<T> extends Graph<T> {
         }
 
         return this.adjacency.reduce<number>((carry, row) => {
-            return carry + ((row[indexOfNode] > 0)? 1 : 0);
+            return carry + ((row[indexOfNode].value > 0)? 1 : 0);
         }, 0)
     }
 
@@ -81,17 +89,23 @@ export default class DirectedGraph<T> extends Graph<T> {
      * 
      * @param fromNodeIdentity The identity string of the node the edge should run from. 
      * @param toNodeIdentity The identity string of the node the edge should run to.
-     * @param skipUpdatingCyclicality This boolean indicates if the cache of the cyclicality of the graph should be updated.
+     * @param options options
+     *  skipUpdatingCyclicality: This boolean indicates if the cache of the cyclicality of the graph should be updated.
      * If `false` is passed the cached will be invalidated because we can not assure that a cycle has not been created.
+     *  data: optional extra data to add to edge
      */
-    addEdge(fromNodeIdentity: string, toNodeIdentity: string, skipUpdatingCyclicality: boolean = false) {
-        if (!this.hasCycle && !skipUpdatingCyclicality) {
+    addEdge(
+      fromNodeIdentity: string,
+      toNodeIdentity: string,
+      options: AddDirectedEdgeOptions<S> = { skipUpdatingCyclicality: false }
+    ) {
+        if (!this.hasCycle && !options.skipUpdatingCyclicality) {
             this.hasCycle = this.wouldAddingEdgeCreateCyle(fromNodeIdentity, toNodeIdentity);
-        } else if (skipUpdatingCyclicality) {
+        } else if (options.skipUpdatingCyclicality) {
             this.hasCycle = undefined;
         }
-
-        super.addEdge(fromNodeIdentity, toNodeIdentity)
+    
+        super.addEdge(fromNodeIdentity, toNodeIdentity, options)
     }
 
     /**
@@ -107,12 +121,12 @@ export default class DirectedGraph<T> extends Graph<T> {
         const startNodeIndex = nodeIdentities.indexOf(startNode);
         const endNodeIndex = nodeIdentities.indexOf(endNode);
 
-        if (this.adjacency[startNodeIndex][endNodeIndex] > 0) {
+        if (this.adjacency[startNodeIndex][endNodeIndex].value > 0) {
             return true
         }
 
         return this.adjacency[startNodeIndex].reduce<boolean>((carry, edge, index) => {
-            if (carry || (edge < 1)) {
+            if (carry || (edge.value < 1)) {
                 return carry;
             }
 
@@ -137,7 +151,7 @@ export default class DirectedGraph<T> extends Graph<T> {
      * 
      * @param startNodeIdentity The string identity of the node from which the subgraph search should start.
      */
-    getSubGraphStartingFrom(startNodeIdentity: string): DirectedGraph<T> {
+    getSubGraphStartingFrom(startNodeIdentity: string): DirectedGraph<T, S> {
         const nodeIndices = Array.from(this.nodes.keys());
         const initalNode = this.nodes.get(startNodeIdentity)
 
@@ -149,7 +163,7 @@ export default class DirectedGraph<T> extends Graph<T> {
             let toReturn = [...nodesToInclude];
             const nodeIndex = nodeIndices.indexOf(startNodeIdentity);
             this.adjacency[nodeIndex].forEach((hasAdj, index) => {
-                if (hasAdj === 1 && !nodesToInclude.find(n => this.nodeIdentity(n) === nodeIndices[index])) {
+                if (hasAdj.value === 1 && !nodesToInclude.find(n => this.nodeIdentity(n) === nodeIndices[index])) {
                     const newNode = this.nodes.get(nodeIndices[index])
                     
                     if (newNode) {
@@ -161,7 +175,7 @@ export default class DirectedGraph<T> extends Graph<T> {
             return toReturn;
         }
 
-        const newGraph = new DirectedGraph<T>(this.nodeIdentity);
+        const newGraph = new DirectedGraph<T, S>(this.nodeIdentity)
         const nodeList = recur(startNodeIdentity, [initalNode])
         const includeIdents = nodeList.map(t => this.nodeIdentity(t));
         Array.from(this.nodes.values()).forEach(n => {
@@ -173,11 +187,11 @@ export default class DirectedGraph<T> extends Graph<T> {
         return newGraph
     }
 
-    private subAdj(include: T[]): Array<Array<Edge>> {
+    private subAdj(include: T[]): Array<Array<Edge<S>>> {
         const includeIdents = include.map(t => this.nodeIdentity(t));
         const nodeIndices = Array.from(this.nodes.keys());
 
-        return this.adjacency.reduce<Array<Array<Edge>>>((carry, cur, index) => {
+        return this.adjacency.reduce<Array<Array<Edge<S>>>>((carry, cur, index) => {
             if (includeIdents.includes(nodeIndices[index])) {
                 return [...carry, cur.filter((_, index) => includeIdents.includes(nodeIndices[index]))]
             } else {

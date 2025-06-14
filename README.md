@@ -102,6 +102,12 @@ graph.addEdge(node1, node3)
 graph.addEdge(node3, node5)
 graph.addEdge(node5, node4)
 
+// Store data on edges
+graph.addEdge(node1, node5, {distance: 32})
+
+// Retrieve edge by node
+graph.getEdgeByNodes(node1, node5) // returns {data: {distance: 32}}
+
 // Get the nodes in topologically sorted order
 graph.topologicallySortedNodes() // returns roughly [{ name: 'node1' }, { name: 'node3' }, { name: 'node5' }, { name: 'node2' }, { name: 'node4' }]
 ```

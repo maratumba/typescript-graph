@@ -1,4 +1,4 @@
-import { DirectedGraph, Graph } from '../src/'
+import { DirectedGraph } from '../src/'
 import { NodeDoesntExistError } from '../src/errors'
 
 /***
@@ -195,7 +195,7 @@ describe("Directed Graph", () => {
     graph.addEdge('B', 'D')
 
     const subGraph3 = graph.getSubGraphStartingFrom('A');
-    
+
     expect(subGraph3.getNodes()).toContainEqual({ name: 'D' })
     expect(subGraph3.canReachFrom('A', 'C')).toBe(true);
     expect(subGraph3.canReachFrom('A', 'D')).toBe(true);

@@ -1,5 +1,5 @@
-import DirectedGraph from "./directedGraph";
-import { CycleError } from "./errors";
+import DirectedGraph, { AddDirectedEdgeOptions } from './directedGraph'
+import { CycleError } from './errors'
 
 /**
  * # DirectedAcyclicGraph
@@ -8,7 +8,7 @@ import { CycleError } from "./errors";
  *
  * @typeParam T `T` is the node type of the graph. Nodes can be anything in all the included examples they are simple objects.
  */
-export default class DirectedAcyclicGraph<T> extends DirectedGraph<T> {
+export default class DirectedAcyclicGraph<T, S = void> extends DirectedGraph<T, S> {
     private _topologicallySortedNodes?: Array<T>;
     protected hasCycle = false; 
 
@@ -17,12 +17,11 @@ export default class DirectedAcyclicGraph<T> extends DirectedGraph<T> {
      * Throws a {@linkcode CycleError} if the graph attempting to be converted contains a cycle.
      * @param graph The source directed graph to convert into a DAG
      */
-    static fromDirectedGraph<T>(graph: DirectedGraph<T>): DirectedAcyclicGraph<T> {
+    static fromDirectedGraph<T, S>(graph: DirectedGraph<T, S>): DirectedAcyclicGraph<T, S> {
         if (!graph.isAcyclic()) {
             throw new CycleError("Can't convert that graph to a DAG because it contains a cycle")
         }
-        const toRet = new DirectedAcyclicGraph<T>();
-
+        const toRet = new DirectedAcyclicGraph<T, S>();
         toRet.nodes = (graph as any).nodes
         toRet.adjacency = (graph as any).adjacency
 
@@ -36,15 +35,16 @@ export default class DirectedAcyclicGraph<T> extends DirectedGraph<T> {
      * 
      * @param fromNodeIdentity The identity string of the node the edge should run from.
      * @param toNodeIdentity The identity string of the node the edge should run to.
+     * @param {AddDirectedEdgeOptions} options - Options for adding edge
      */
-    addEdge(fromNodeIdentity: string, toNodeIdentity: string) {
+    addEdge(fromNodeIdentity: string, toNodeIdentity: string, options?: AddDirectedEdgeOptions<S>) {
         if (this.wouldAddingEdgeCreateCyle(fromNodeIdentity, toNodeIdentity)) {
             throw new CycleError(`Can't add edge from ${fromNodeIdentity} to ${toNodeIdentity} it would create a cycle`)
         }
 
         // Invalidate cache of toposorted nodes
         this._topologicallySortedNodes = undefined;
-        super.addEdge(fromNodeIdentity, toNodeIdentity, true)
+        super.addEdge(fromNodeIdentity, toNodeIdentity, { skipUpdatingCyclicality: true })
     }
 
     /**
@@ -77,7 +77,7 @@ export default class DirectedAcyclicGraph<T> extends DirectedGraph<T> {
         const nodeIndices = Array.from(this.nodes.keys());
         const nodeInDegrees = new Map(Array.from(this.nodes.keys()).map(n => [n, this.indegreeOfNode(n)]))
 
-        const adjCopy = this.adjacency.map(a => [...a])
+        const adjCopy = this.adjacency.map(a => [...a.map(e => ({ ...e }))])
 
         let toSearch = Array.from(nodeInDegrees).filter(pair => pair[1] === 0)
 
@@ -95,9 +95,9 @@ export default class DirectedAcyclicGraph<T> extends DirectedGraph<T> {
             toReturn.push(curNode);
 
             (adjCopy[nodeIndices.indexOf(n[0])])?.forEach((edge, index) => {
-                if (edge > 0) {
-                    adjCopy[nodeIndices.indexOf(n[0])][index] = 0;
-                    const target = (nodeInDegrees.get(nodeIndices[index]) as number);
+                if (edge.value > 0) {
+                    adjCopy[nodeIndices.indexOf(n[0])][index].value = 0;
+                    const target = nodeInDegrees.get(nodeIndices[index]) as number;
                     nodeInDegrees.set(nodeIndices[index], target - 1)
 
                     if ((target - 1) === 0) {
@@ -122,7 +122,7 @@ export default class DirectedAcyclicGraph<T> extends DirectedGraph<T> {
      * 
      * @param startNodeIdentity The string identity of the node from which the subgraph search should start.
      */
-    getSubGraphStartingFrom(startNodeIdentity: string): DirectedAcyclicGraph<T> {
+    getSubGraphStartingFrom(startNodeIdentity: string): DirectedAcyclicGraph<T, S> {
         return DirectedAcyclicGraph.fromDirectedGraph(super.getSubGraphStartingFrom(startNodeIdentity));
     }
 }
